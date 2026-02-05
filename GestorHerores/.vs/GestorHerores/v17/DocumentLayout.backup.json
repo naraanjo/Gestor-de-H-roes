@@ -1,7 +1,12 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\Alvaro\\Documents\\GitHub\\Gestor-de-H-roes\\GestorHerores\\",
-  "Documents": [],
+  "WorkspaceRootPath": "C:\\Users\\adria\\Documents\\GitHub\\Gestor-de-H-roes\\GestorHerores\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{D9BCBB5E-4CAF-42FA-B320-90E8AB211E73}|GestorHerores.csproj|c:\\users\\adria\\documents\\github\\gestor-de-h-roes\\gestorherores\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D9BCBB5E-4CAF-42FA-B320-90E8AB211E73}|GestorHerores.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -9,7 +14,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 254,
-          "SelectedChildIndex": -1,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -30,6 +35,19 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{25f7e850-ffa1-11d0-b63f-00a0c922e851}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\adria\\Documents\\GitHub\\Gestor-de-H-roes\\GestorHerores\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\adria\\Documents\\GitHub\\Gestor-de-H-roes\\GestorHerores\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-05T15:02:27.592Z",
+              "EditorCaption": ""
             }
           ]
         },
