@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GestorHerores")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3e67b0ed72a48c44e0af2b40f289ff7bdd2ea571")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+31fa89e2e809ad50511e4df0e940a50a1041c4d8")]
 [assembly: System.Reflection.AssemblyProductAttribute("GestorHerores")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GestorHerores")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
