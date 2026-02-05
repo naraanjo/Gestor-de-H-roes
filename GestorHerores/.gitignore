@@ -1,0 +1,27 @@
+# --- Build & Compilados (Lo más importante para tu entrega) ---
+[Bb]in/
+[Oo]bj/
+
+# --- Visual Studio & IDEs ---
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# --- Archivos de sistema ---
+.DS_Store
+Thumbs.db
+
+# --- Logs y archivos temporales ---
+*.log
+
+# --- Configuración de Entorno (Seguridad) ---
+# Ignoramos configuraciones locales que puedan tener claves reales
+appsettings.Development.json
+appsettings.Local.json
+
+# NOTA: No ignoramos 'appsettings.json' base para que el profesor
+# pueda ver la estructura de configuración, pero recuerda borrar
+# contraseñas reales antes de subirlo si usas una BD remota.
