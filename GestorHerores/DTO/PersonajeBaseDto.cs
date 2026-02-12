@@ -3,6 +3,10 @@ using System.Text.Json;
 
 namespace GestorHerores.DTO
 {
+    /*
+     * DTO Base para Personajes
+     * Autor: Adrian Dondarza
+     */
     public abstract class PersonajeBaseDto
     {
         [Required(ErrorMessage = "El nombre es obligatorio")]

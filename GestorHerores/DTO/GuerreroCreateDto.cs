@@ -2,6 +2,10 @@
 
 namespace GestorHerores.DTO
 {
+    /*
+     * DTO para la clase Guerrero
+     * Autor: Adrian Dondarza
+     */
     public class GuerreroCreateDto : PersonajeBaseDto
     {
         [Required]

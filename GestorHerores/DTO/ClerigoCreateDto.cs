@@ -2,6 +2,10 @@
 
 namespace GestorHerores.DTO
 {
+    /*
+     * DTO para la clase Clerigo
+     * Autor: Adrian Dondarza
+     */
     public class ClerigoCreateDto : PersonajeBaseDto
     {
         [Required]
