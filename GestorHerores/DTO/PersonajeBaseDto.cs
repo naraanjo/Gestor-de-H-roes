@@ -7,9 +7,9 @@ namespace GestorHerores.DTO
      * DTO Base para Personajes
      * Autor: Adrian Dondarza
      */
-    public abstract class PersonajeBaseDto
+    public class PersonajeBaseDto
     {
-        [Required(ErrorMessage = "El nombre es obligatorio")]
+        [Required]
         [MaxLength(50)]
         public string Nombre { get; set; } = string.Empty;
 

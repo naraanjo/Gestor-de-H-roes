@@ -1,40 +1,46 @@
 ﻿using DandDSoft.Infrastructure.Data;
-using GestorHeroes.Models; // Tus modelos
-using GestorHerores.DTO;   // Tus DTOs
+using GestorHeroes.Models;
+using GestorHerores.DTO;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace GestorHeroes.Services
 {
     /*
-     Author: Álvaro Naranjo Rodriguez
-     Descripción: Implementación de la lógica de negocio.
-     Maneja mapeo manual de DTOs y lógica de JSONB.
-    */
+     * Author: Álvaro Naranjo Rodriguez
+     * Descripción: Implementación de la lógica de negocio para la gestión de personajes.
+     * Esta clase gestiona la persistencia polimórfica (TPT) y el procesamiento 
+     * de datos dinámicos mediante JSONB en PostgreSQL.
+     */
     public class PersonajeService : IPersonajeService
     {
         private readonly GameDbContext _context;
 
+        // Inyección del contexto de base de datos a través del constructor
         public PersonajeService(GameDbContext context)
         {
             _context = context;
         }
 
-        // 1. GET ALL: Obtener todos (mezcla polimórfica)
-        // EF Core traerá automáticamente Guerreros, Magos, etc. gracias a TPT.
+        /// <summary>
+        /// Obtiene todos los personajes registrados en el sistema.
+        /// EF Core resuelve automáticamente el polimorfismo gracias a la estrategia TPT.
+        /// </summary>
         public async Task<IEnumerable<Personaje>> GetAllAsync()
         {
             return await _context.Personajes.ToListAsync();
         }
 
-        // 2. GET BY ID
+        /// <summary>
+        /// Busca un personaje específico por su identificador único.
+        /// </summary>
         public async Task<Personaje?> GetByIdAsync(int id)
         {
             return await _context.Personajes.FindAsync(id);
         }
 
-        // 3. CREATE (Métodos específicos por tipo)
-        // Mapeamos manualmente de DTO a Entidad incluyendo el JSON.
+        // --- MÉTODOS DE CREACIÓN (Implementación TPT) ---
+        // Cada método mapea el DTO específico a su entidad correspondiente en la base de datos.
 
         public async Task<Guerrero> CreateGuerreroAsync(GuerreroCreateDto dto)
         {
@@ -42,13 +48,12 @@ namespace GestorHeroes.Services
             {
                 Nombre = dto.Nombre,
                 Nivel = dto.Nivel,
-                FechaCreacion = DateTime.UtcNow, // Obligatorio según modelo
+                FechaCreacion = DateTime.UtcNow, // Fecha automática en UTC
                 Gremio = dto.Gremio,
                 ArmaPrincipal = dto.ArmaPrincipal,
                 Furia = dto.Furia,
-                Rasgos = ConvertJson(dto.Rasgos) // Conversión auxiliar
+                Rasgos = ConvertJson(dto.Rasgos) // Conversión de JsonElement a JsonDocument
             };
-
             _context.Guerreros.Add(guerrero);
             await _context.SaveChangesAsync();
             return guerrero;
@@ -66,7 +71,6 @@ namespace GestorHeroes.Services
                 ElementoPrincipal = dto.ElementoPrincipal,
                 Rasgos = ConvertJson(dto.Rasgos)
             };
-
             _context.Magos.Add(mago);
             await _context.SaveChangesAsync();
             return mago;
@@ -84,7 +88,6 @@ namespace GestorHeroes.Services
                 TieneMascota = dto.TieneMascota,
                 Rasgos = ConvertJson(dto.Rasgos)
             };
-
             _context.Arqueros.Add(arquero);
             await _context.SaveChangesAsync();
             return arquero;
@@ -102,24 +105,25 @@ namespace GestorHeroes.Services
                 PuntosSanacion = dto.PuntosSanacion,
                 Rasgos = ConvertJson(dto.Rasgos)
             };
-
             _context.Clerigos.Add(clerigo);
             await _context.SaveChangesAsync();
             return clerigo;
         }
 
-        // 4. UPDATE
-        // Actualiza los datos base y el JSON.
+        /// <summary>
+        /// Actualiza los datos base de un personaje existente y sus rasgos dinámicos.
+        /// </summary>
         public async Task<bool> UpdateAsync(int id, PersonajeBaseDto dto)
         {
             var personaje = await _context.Personajes.FindAsync(id);
             if (personaje == null) return false;
 
+            // Actualización de campos comunes
             personaje.Nombre = dto.Nombre;
             personaje.Nivel = dto.Nivel;
             personaje.Gremio = dto.Gremio;
 
-            // Actualizamos el JSON si viene nuevo dato
+            // Actualización del documento JSON si se proporciona en el DTO
             if (dto.Rasgos.HasValue)
             {
                 personaje.Rasgos = ConvertJson(dto.Rasgos);
@@ -129,7 +133,9 @@ namespace GestorHeroes.Services
             return true;
         }
 
-        // 5. DELETE
+        /// <summary>
+        /// Elimina un personaje del sistema por su ID.
+        /// </summary>
         public async Task<bool> DeleteAsync(int id)
         {
             var personaje = await _context.Personajes.FindAsync(id);
@@ -140,23 +146,27 @@ namespace GestorHeroes.Services
             return true;
         }
 
-        // --- CONSULTAS COMPLEJAS ---
+        // --- CONSULTAS COMPLEJAS (Requisito Punto 6) ---
 
-        // Consulta 1: Filtrado Profundo por JSON 
-        // Busca personajes que tengan una clave específica en su JSON (ej. "MiedoA").
+        /// <summary>
+        /// Filtrado Profundo por JSON: Busca personajes que posean una clave específica 
+        /// dentro de su columna 'Rasgos' (JSONB).
+        /// </summary>
         public async Task<IEnumerable<Personaje>> GetByRasgoAsync(string claveRasgo)
         {
-            // Nota: En EF Core 9 con Npgsql, esto se traduce a consultas JSONB nativas.
-            return await _context.Personajes
-                .Where(p => p.Rasgos != null && p.Rasgos.RootElement.GetProperty(claveRasgo).ValueKind != JsonValueKind.Undefined)
-                .ToListAsync();
+            // Nota: Se realiza una búsqueda insensible a mayúsculas/minúsculas sobre las claves del JSON
+            var todos = await _context.Personajes.ToListAsync();
+            return todos.Where(p => p.Rasgos != null &&
+                               p.Rasgos.RootElement.EnumerateObject()
+                               .Any(prop => prop.Name.Equals(claveRasgo, StringComparison.OrdinalIgnoreCase)));
         }
 
-        // Consulta 2: Agrupación (Estadísticas por Gremio) 
-        // Cuenta personajes por gremio y saca la media de nivel.
+        /// <summary>
+        /// Agrupación Polimórfica: Genera estadísticas de nivel promedio y conteo agrupados por Gremio.
+        /// </summary>
         public async Task<object> GetEstadisticasPorGremioAsync()
         {
-            var stats = await _context.Personajes
+            return await _context.Personajes
                 .GroupBy(p => p.Gremio)
                 .Select(g => new
                 {
@@ -165,17 +175,18 @@ namespace GestorHeroes.Services
                     NivelPromedio = g.Average(p => p.Nivel)
                 })
                 .ToListAsync();
-
-            return stats;
         }
 
-        // --- Helpers ---
+        // --- HELPERS ---
 
-        // Convierte de JsonElement (DTO) a JsonDocument (Entity/DB)
+        /// <summary>
+        /// Método auxiliar para transformar un JsonElement (volátil) en un JsonDocument 
+        /// persistente apto para ser almacenado en PostgreSQL.
+        /// </summary>
         private JsonDocument? ConvertJson(JsonElement? elemento)
         {
             if (!elemento.HasValue) return null;
-            // Parseamos el contenido crudo para crear un documento independiente
+            // Parseamos el RawText para asegurar que el documento sea independiente del ciclo de vida del request
             return JsonDocument.Parse(elemento.Value.GetRawText());
         }
     }

@@ -1,4 +1,6 @@
-﻿namespace GestorHerores.DTO
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace GestorHerores.DTO
 {
     /*
      * DTO para la clase Arquero
@@ -6,6 +8,7 @@
      */
     public class ArqueroCreateDto : PersonajeBaseDto
     {
+        [Required]
         public double Precision { get; set; }
         public bool TieneMascota { get; set; }
     }

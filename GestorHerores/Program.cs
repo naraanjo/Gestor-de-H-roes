@@ -2,24 +2,32 @@ using DandDSoft.Infrastructure.Data;
 using GestorHeroes.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. REGISTRO DE LA BASE DE DATOS (OBLIGATORIO PARA MIGRACIONES)
+// 1. REGISTRO DE LA BASE DE DATOS
 builder.Services.AddDbContext<GameDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
 
-// 2. REGISTRO DE SERVICIOS
+// 2. REGISTRO DE SERVICIOS Y CONTROLADORES
 builder.Services.AddScoped<IPersonajeService, PersonajeService>();
-builder.Services.AddControllers();
 
-// 3. CONFIGURACIÓN DE SWAGGER (ESTO QUITA EL ERROR ROJO DE TU IMAGEN)
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Esto asegura que el JSON se vea bien en la API
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
+
+// 3. CONFIGURACIÓN DE SWAGGER
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "D&DSoft API", Version = "v1" });
-    // Fix para el campo JSONB
-    c.MapType<System.Text.Json.JsonDocument>(() => new OpenApiSchema { Type = "object" });
+    // Fix para el campo JSONB (JsonDocument o JsonElement)
+    c.MapType<JsonDocument>(() => new OpenApiSchema { Type = "object" });
+    c.MapType<JsonElement>(() => new OpenApiSchema { Type = "object" });
 });
 
 var app = builder.Build();
@@ -31,11 +39,18 @@ using (var scope = app.Services.CreateScope())
     context.Database.Migrate();
 }
 
+// 5. CONFIGURACIÓN DEL PIPELINE
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        // Esto ayuda a que Swagger cargue correctamente en la raíz
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "D&DSoft API v1");
+    });
 }
+
+// app.UseHttpsRedirection(); // Opcional en desarrollo local
 
 app.UseAuthorization();
 app.MapControllers();
