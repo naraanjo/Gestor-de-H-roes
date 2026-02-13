@@ -1,9 +1,10 @@
 using DandDSoft.Infrastructure.Data;
 using GestorHeroes.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Text.Json;
-using System.Text.Json.Serialization; // Necesario para JsonUnmappedMemberHandling
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,18 +12,44 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<GameDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
 
-// REGISTRO DE SERVICIOS Y CONTROLADORES
+// REGISTRO DE SERVICIOS
 builder.Services.AddScoped<IPersonajeService, PersonajeService>();
 
+// Restricciones de JSON para evitar atributos no mapeados
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Configuro la política de nombres a CamelCase para seguir estándares JSON
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-
-        // Esta es la configuración clave: Indico que si llega una propiedad en el JSON 
-        // que no está definida en el DTO, se debe lanzar un error automáticamente
+        // Mantenemos la restricción estricta
         options.JsonSerializerOptions.UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow;
+    })
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Personalizamos el error
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            // Obtenemos los errores de validación relacionados con miembros no mapeados
+            var errores = context.ModelState
+                .Where(e => e.Value.Errors.Count > 0)
+                .Select(e => new
+                {
+                    Campo = e.Key.Replace("$.", ""), // Quitamos el símbolo raro '$' si aparece
+                    Mensaje = "Este campo no pertenece al personaje o el formato es incorrecto." // Notifico al usuario
+                })
+                .ToList();
+
+            // Mensaje al usuario
+            var respuestaPersonalizada = new
+            {
+                Titulo = "Datos invalidos",
+                Estado = 400,
+                Ayuda = "Por favor, revisa que no estés enviando atributos que no existen en este tipo de héroe.",
+                DetallesErrores = errores
+            };
+
+            // Devolvemos el error
+            return new BadRequestObjectResult(respuestaPersonalizada);
+        };
     });
 
 // CONFIGURACIÓN DE SWAGGER
@@ -30,21 +57,20 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "D&DSoft API", Version = "v1" });
-    // Mapeo los tipos JSON para que Swagger los reconozca correctamente
     c.MapType<JsonDocument>(() => new OpenApiSchema { Type = "object" });
     c.MapType<JsonElement>(() => new OpenApiSchema { Type = "object" });
 });
 
 var app = builder.Build();
 
-// MIGRACIÓN AUTOMÁTICA AL ARRANCAR
+// MIGRACIÓN AUTOMÁTICA
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<GameDbContext>();
     context.Database.Migrate();
 }
 
-// CONFIGURACIÓN DEL PIPELINE HTTP
+// PIPELINE HTTP
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
