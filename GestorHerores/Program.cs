@@ -6,11 +6,11 @@ using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. REGISTRO DE LA BASE DE DATOS
+//REGISTRO DE LA BASE DE DATOS
 builder.Services.AddDbContext<GameDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgresConnection")));
 
-// 2. REGISTRO DE SERVICIOS Y CONTROLADORES
+//REGISTRO DE SERVICIOS Y CONTROLADORES
 builder.Services.AddScoped<IPersonajeService, PersonajeService>();
 
 builder.Services.AddControllers()
@@ -20,7 +20,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
-// 3. CONFIGURACIÓN DE SWAGGER
+//CONFIGURACIÓN DE SWAGGER
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -32,14 +32,14 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// 4. MIGRACIÓN AUTOMÁTICA AL ARRANCAR
+//MIGRACIÓN AUTOMÁTICA AL ARRANCAR
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<GameDbContext>();
     context.Database.Migrate();
 }
 
-// 5. CONFIGURACIÓN DEL PIPELINE
+//CONFIGURACIÓN DEL PIPELINE
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -50,7 +50,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// app.UseHttpsRedirection(); // Opcional en desarrollo local
+
 
 app.UseAuthorization();
 app.MapControllers();
