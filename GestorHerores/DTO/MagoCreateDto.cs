@@ -3,8 +3,8 @@
 namespace GestorHerores.DTO
 {
     /*
-     * DTO para la clase Mago
      * Autor: Adrian Dondarza
+     * Descripción: Defino el DTO específico para crear magos heredando la validación base.
      */
     public class MagoCreateDto : PersonajeBaseDto
     {

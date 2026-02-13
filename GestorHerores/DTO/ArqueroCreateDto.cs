@@ -3,8 +3,8 @@
 namespace GestorHerores.DTO
 {
     /*
-     * DTO para la clase Arquero
      * Autor: Adrian Dondarza
+     * Descripción: Defino el DTO específico para crear arqueros heredando la validación base.
      */
     public class ArqueroCreateDto : PersonajeBaseDto
     {

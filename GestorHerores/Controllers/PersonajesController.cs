@@ -5,21 +5,20 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GestorHeroes.Controllers
 {
-    // Aquí defino la clase controladora que se encarga de gestionar las peticiones relacionadas con los personajes
-    // Me aseguro de heredar de ControllerBase y decoro la clase para que funcione como un controlador de API
+    // Defino el controlador para gestionar las peticiones HTTP relacionadas con los personajes
     [ApiController]
     [Route("api/[controller]")]
     public class PersonajesController : ControllerBase
     {
         private readonly IPersonajeService _personajeService;
 
-        // En este constructor inyecto la dependencia del servicio de personajes para poder utilizar sus métodos
+        // Inyecto la dependencia del servicio de personajes
         public PersonajesController(IPersonajeService personajeService)
         {
             _personajeService = personajeService;
         }
 
-        // Cuando recibo una petición GET genérica, solicito al servicio todos los personajes y los devuelvo en una respuesta exitosa
+        // Devuelvo todos los personajes registrados
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -27,7 +26,7 @@ namespace GestorHeroes.Controllers
             return Ok(personajes);
         }
 
-        // Busco un personaje específico por su identificador; si no lo encuentro devuelvo un error NotFound, de lo contrario devuelvo el personaje
+        // Busco un personaje por ID y devuelvo NotFound si no existe
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -36,26 +35,30 @@ namespace GestorHeroes.Controllers
             return Ok(personaje);
         }
 
-        // A continuación agrupo los métodos de creación donde controlo explícitamente las excepciones de negocio
+        // --- MÉTODOS DE CREACIÓN CON MANEJO DE ERRORES ---
 
-        // Intento crear un guerrero envolviendo la llamada en un bloque try para capturar posibles errores
+        // Intento crear un Guerrero gestionando posibles errores de validación
         [HttpPost("guerrero")]
         public async Task<IActionResult> CreateGuerrero([FromBody] GuerreroCreateDto dto)
         {
             try
             {
                 var guerrero = await _personajeService.CreateGuerreroAsync(dto);
-                // Si todo sale bien, indico dónde se puede consultar el nuevo recurso creado
                 return CreatedAtAction(nameof(GetById), new { id = guerrero.Id }, guerrero);
             }
             catch (NombreDuplicadoException ex)
             {
-                // Si capturo la excepción de nombre duplicado, devuelvo un conflicto HTTP con el mensaje de error
+                // Si el nombre está duplicado devuelvo Conflict (409)
                 return Conflict(new { mensaje = ex.Message });
+            }
+            catch (AtributosNoValidosException ex)
+            {
+                // Si hay atributos desconocidos devuelvo Bad Request (400)
+                return BadRequest(new { mensaje = ex.Message });
             }
         }
 
-        // Realizo el mismo proceso para crear un mago, controlando que el nombre no esté repetido
+        // Intento crear un Mago con el mismo control de excepciones
         [HttpPost("mago")]
         public async Task<IActionResult> CreateMago([FromBody] MagoCreateDto dto)
         {
@@ -66,12 +69,15 @@ namespace GestorHeroes.Controllers
             }
             catch (NombreDuplicadoException ex)
             {
-                // Aquí también devuelvo un conflicto si detecto que el nombre ya existe
                 return Conflict(new { mensaje = ex.Message });
+            }
+            catch (AtributosNoValidosException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
             }
         }
 
-        // Gestiono la creación de un arquero bajo la misma lógica de control de excepciones
+        // Intento crear un Arquero gestionando errores
         [HttpPost("arquero")]
         public async Task<IActionResult> CreateArquero([FromBody] ArqueroCreateDto dto)
         {
@@ -84,9 +90,13 @@ namespace GestorHeroes.Controllers
             {
                 return Conflict(new { mensaje = ex.Message });
             }
+            catch (AtributosNoValidosException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
         }
 
-        // Finalmente gestiono la creación de un clérigo asegurándome de informar si hay conflicto de nombres
+        // Intento crear un Clérigo gestionando errores
         [HttpPost("clerigo")]
         public async Task<IActionResult> CreateClerigo([FromBody] ClerigoCreateDto dto)
         {
@@ -99,9 +109,13 @@ namespace GestorHeroes.Controllers
             {
                 return Conflict(new { mensaje = ex.Message });
             }
+            catch (AtributosNoValidosException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
         }
 
-        // Intento actualizar la información de un personaje existente
+        // Actualizo un personaje existente validando también los datos de entrada
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] PersonajeBaseDto dto)
         {
@@ -109,30 +123,30 @@ namespace GestorHeroes.Controllers
             {
                 var actualizado = await _personajeService.UpdateAsync(id, dto);
 
-                // Si el servicio me indica que no pudo actualizar porque no existe el ID, devuelvo NotFound
                 if (!actualizado) return NotFound();
 
-                // Si la actualización fue exitosa, devuelvo NoContent
                 return NoContent();
             }
             catch (NombreDuplicadoException ex)
             {
-                // Incluso al actualizar, si el nuevo nombre entra en conflicto con otro, devuelvo el error correspondiente
                 return Conflict(new { mensaje = ex.Message });
+            }
+            catch (AtributosNoValidosException ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
             }
         }
 
-        // Solicito la eliminación de un personaje por su ID
+        // Elimino un personaje del sistema
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var eliminado = await _personajeService.DeleteAsync(id);
-            // Verifico si la eliminación fue posible, si no encuentro el recurso devuelvo NotFound
             if (!eliminado) return NotFound();
             return NoContent();
         }
 
-        // Busco y devuelvo los personajes que contengan un rasgo específico en su JSON
+        // Busco personajes por un rasgo JSON específico
         [HttpGet("rasgo/{clave}")]
         public async Task<IActionResult> GetByRasgo(string clave)
         {
@@ -140,7 +154,7 @@ namespace GestorHeroes.Controllers
             return Ok(personajes);
         }
 
-        // Solicito al servicio las estadísticas agrupadas por gremio y las devuelvo al cliente
+        // Obtengo las estadísticas del gremio
         [HttpGet("estadisticas/gremio")]
         public async Task<IActionResult> GetEstadisticasPorGremio()
         {

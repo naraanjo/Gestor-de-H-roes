@@ -1,11 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace GestorHerores.DTO
 {
     /*
-     * DTO Base para Personajes
      * Autor: Adrian Dondarza
+     * Descripción: Defino la estructura base para los DTOs de personajes e incluyo la capacidad de detectar atributos no válidos.
      */
     public class PersonajeBaseDto
     {
@@ -20,5 +21,10 @@ namespace GestorHerores.DTO
 
         // Campo para los rasgos dinámicos (JSONB)
         public JsonElement? Rasgos { get; set; }
+
+        // Añado este diccionario para capturar cualquier propiedad del JSON que no coincida con la clase
+        // Esto me permite validar posteriormente si el usuario envió datos incorrectos
+        [JsonExtensionData]
+        public Dictionary<string, object>? DatosExtra { get; set; }
     }
 }

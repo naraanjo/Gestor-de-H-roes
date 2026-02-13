@@ -8,35 +8,38 @@ namespace GestorHeroes.Services
 {
     /*
      * Author: Álvaro Naranjo Rodriguez
-     * Descripción: Implemento la lógica de negocio asegurándome de validar que los nombres sean únicos.
+     * Descripción: Implemento la lógica de negocio asegurándome de validar nombres únicos y atributos desconocidos.
      */
     public class PersonajeService : IPersonajeService
     {
         private readonly GameDbContext _context;
 
-        // Inyecto el contexto de la base de datos para poder realizar las operaciones de persistencia
+        // Inyecto el contexto de la base de datos para realizar operaciones de persistencia
         public PersonajeService(GameDbContext context)
         {
             _context = context;
         }
 
-        // Recupero el listado completo de personajes almacenados en la base de datos
+        // Recupero el listado completo de personajes almacenados
         public async Task<IEnumerable<Personaje>> GetAllAsync()
         {
             return await _context.Personajes.ToListAsync();
         }
 
-        // Busco un personaje en particular utilizando su identificador único
+        // Busco un personaje particular por su identificador único
         public async Task<Personaje?> GetByIdAsync(int id)
         {
             return await _context.Personajes.FindAsync(id);
         }
 
-        // A continuación implemento los métodos de creación validando previamente las reglas de negocio
+        // --- MÉTODOS DE CREACIÓN CON DOBLE VALIDACIÓN ---
 
         public async Task<Guerrero> CreateGuerreroAsync(GuerreroCreateDto dto)
         {
-            // Primero valido que el nombre no exista ya para evitar duplicados
+            // Primero verifico que no se hayan enviado atributos que no correspondan a un Guerrero
+            ValidarAtributosDesconocidos(dto.DatosExtra, "Guerrero");
+
+            // Valido que el nombre sea único en el sistema
             await ValidarNombreUnicoAsync(dto.Nombre);
 
             var guerrero = new Guerrero
@@ -56,7 +59,8 @@ namespace GestorHeroes.Services
 
         public async Task<Mago> CreateMagoAsync(MagoCreateDto dto)
         {
-            // Verifico la disponibilidad del nombre antes de crear el objeto mago y persistirlo
+            // Valido la estructura del JSON y la unicidad del nombre antes de crear el Mago
+            ValidarAtributosDesconocidos(dto.DatosExtra, "Mago");
             await ValidarNombreUnicoAsync(dto.Nombre);
 
             var mago = new Mago
@@ -76,7 +80,8 @@ namespace GestorHeroes.Services
 
         public async Task<Arquero> CreateArqueroAsync(ArqueroCreateDto dto)
         {
-            // Me aseguro de que el nombre sea único antes de proceder con la creación del arquero
+            // Me aseguro de que los datos sean estrictamente de Arquero y el nombre sea único
+            ValidarAtributosDesconocidos(dto.DatosExtra, "Arquero");
             await ValidarNombreUnicoAsync(dto.Nombre);
 
             var arquero = new Arquero
@@ -96,7 +101,8 @@ namespace GestorHeroes.Services
 
         public async Task<Clerigo> CreateClerigoAsync(ClerigoCreateDto dto)
         {
-            // Antes de guardar el clérigo compruebo que no exista otro héroe con el mismo nombre
+            // Realizo las validaciones de negocio y estructura antes de guardar el Clérigo
+            ValidarAtributosDesconocidos(dto.DatosExtra, "Clerigo");
             await ValidarNombreUnicoAsync(dto.Nombre);
 
             var clerigo = new Clerigo
@@ -116,10 +122,13 @@ namespace GestorHeroes.Services
 
         public async Task<bool> UpdateAsync(int id, PersonajeBaseDto dto)
         {
+            // También valido en la actualización para evitar que envíen campos que no se pueden actualizar por esta vía
+            ValidarAtributosDesconocidos(dto.DatosExtra, "Personaje (Base)");
+
             var personaje = await _context.Personajes.FindAsync(id);
             if (personaje == null) return false;
 
-            // Al actualizar compruebo si el nombre ha cambiado respecto al actual antes de validar unicidad
+            // Valido unicidad solo si el nombre ha cambiado
             if (!string.Equals(personaje.Nombre, dto.Nombre, StringComparison.CurrentCultureIgnoreCase))
             {
                 await ValidarNombreUnicoAsync(dto.Nombre);
@@ -150,7 +159,7 @@ namespace GestorHeroes.Services
 
         public async Task<IEnumerable<Personaje>> GetByRasgoAsync(string claveRasgo)
         {
-            // Recupero todos los personajes y filtro en memoria aquellos que contengan la clave de rasgo especificada en su estructura JSON
+            // Filtro en memoria los personajes que contienen la clave solicitada en su JSON de rasgos
             var todos = await _context.Personajes.ToListAsync();
             return todos.Where(p => p.Rasgos != null &&
                                p.Rasgos.RootElement.EnumerateObject()
@@ -159,7 +168,7 @@ namespace GestorHeroes.Services
 
         public async Task<object> GetEstadisticasPorGremioAsync()
         {
-            // Agrupo los personajes por su gremio y calculo métricas como la cantidad total y el nivel promedio de cada grupo
+            // Calculo estadísticas agrupadas por gremio
             return await _context.Personajes
                 .GroupBy(p => p.Gremio)
                 .Select(g => new
@@ -173,29 +182,45 @@ namespace GestorHeroes.Services
 
         private JsonDocument? ConvertJson(JsonElement? elemento)
         {
-            // Transformo el elemento JSON recibido en un documento persistente si este contiene valor
             if (!elemento.HasValue) return null;
             return JsonDocument.Parse(elemento.Value.GetRawText());
         }
 
-        // Defino este método privado para encapsular la verificación de nombres en la base de datos
+        // --- VALIDACIONES PRIVADAS ---
+
+        // Compruebo si ya existe un personaje con el mismo nombre en la base de datos
         private async Task ValidarNombreUnicoAsync(string nombre)
         {
-            // Compruebo en la base de datos si existe algún personaje con el mismo nombre ignorando mayúsculas y minúsculas
             bool existe = await _context.Personajes
                 .AnyAsync(p => p.Nombre.ToLower() == nombre.ToLower());
 
             if (existe)
             {
-                // Si encuentro coincidencias lanzo una excepción personalizada para detener el proceso
                 throw new NombreDuplicadoException($"El nombre '{nombre}' ya está en uso por otro héroe.");
+            }
+        }
+
+        // Verifico si el DTO ha capturado propiedades que no deberían estar ahí
+        private void ValidarAtributosDesconocidos(Dictionary<string, object>? extras, string tipo)
+        {
+            if (extras != null && extras.Count > 0)
+            {
+                string camposInvalidos = string.Join(", ", extras.Keys);
+                throw new AtributosNoValidosException($"Error: El tipo '{tipo}' NO admite los campos: [{camposInvalidos}]. Por favor revisa el JSON.");
             }
         }
     }
 
-    // Defino una excepción personalizada para notificar errores de conflicto de nombres
+    // --- EXCEPCIONES PERSONALIZADAS ---
+
     public class NombreDuplicadoException : Exception
     {
         public NombreDuplicadoException(string message) : base(message) { }
+    }
+
+    // Añado esta excepción para controlar errores de estructura en la petición
+    public class AtributosNoValidosException : Exception
+    {
+        public AtributosNoValidosException(string message) : base(message) { }
     }
 }

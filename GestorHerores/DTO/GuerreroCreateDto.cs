@@ -3,8 +3,8 @@
 namespace GestorHerores.DTO
 {
     /*
-     * DTO para la clase Guerrero
      * Autor: Adrian Dondarza
+     * Descripción: Defino el DTO específico para crear guerreros heredando la validación base.
      */
     public class GuerreroCreateDto : PersonajeBaseDto
     {

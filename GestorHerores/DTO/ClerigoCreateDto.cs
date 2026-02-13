@@ -3,8 +3,8 @@
 namespace GestorHerores.DTO
 {
     /*
-     * DTO para la clase Clerigo
      * Autor: Adrian Dondarza
+     * Descripción: Defino el DTO específico para crear clérigos heredando la validación base.
      */
     public class ClerigoCreateDto : PersonajeBaseDto
     {
