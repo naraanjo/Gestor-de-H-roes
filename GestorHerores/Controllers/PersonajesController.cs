@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GestorHeroes.Controllers
 {
-    // Defino el controlador para gestionar las peticiones HTTP relacionadas con los personajes
+    // Controlador encargado de gestionar los personajes del sistema
     [ApiController]
     [Route("api/[controller]")]
     public class PersonajesController : ControllerBase
@@ -18,7 +18,6 @@ namespace GestorHeroes.Controllers
             _personajeService = personajeService;
         }
 
-        // Devuelvo todos los personajes registrados
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -26,7 +25,6 @@ namespace GestorHeroes.Controllers
             return Ok(personajes);
         }
 
-        // Busco un personaje por ID y devuelvo NotFound si no existe
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -35,9 +33,8 @@ namespace GestorHeroes.Controllers
             return Ok(personaje);
         }
 
-        // --- MÉTODOS DE CREACIÓN CON MANEJO DE ERRORES ---
+        // --- MÉTODOS DE CREACIÓN ---
 
-        // Intento crear un Guerrero gestionando posibles errores de validación
         [HttpPost("guerrero")]
         public async Task<IActionResult> CreateGuerrero([FromBody] GuerreroCreateDto dto)
         {
@@ -48,17 +45,10 @@ namespace GestorHeroes.Controllers
             }
             catch (NombreDuplicadoException ex)
             {
-                // Si el nombre está duplicado devuelvo Conflict (409)
                 return Conflict(new { mensaje = ex.Message });
-            }
-            catch (AtributosNoValidosException ex)
-            {
-                // Si hay atributos desconocidos devuelvo Bad Request (400)
-                return BadRequest(new { mensaje = ex.Message });
             }
         }
 
-        // Intento crear un Mago con el mismo control de excepciones
         [HttpPost("mago")]
         public async Task<IActionResult> CreateMago([FromBody] MagoCreateDto dto)
         {
@@ -71,13 +61,8 @@ namespace GestorHeroes.Controllers
             {
                 return Conflict(new { mensaje = ex.Message });
             }
-            catch (AtributosNoValidosException ex)
-            {
-                return BadRequest(new { mensaje = ex.Message });
-            }
         }
 
-        // Intento crear un Arquero gestionando errores
         [HttpPost("arquero")]
         public async Task<IActionResult> CreateArquero([FromBody] ArqueroCreateDto dto)
         {
@@ -90,13 +75,8 @@ namespace GestorHeroes.Controllers
             {
                 return Conflict(new { mensaje = ex.Message });
             }
-            catch (AtributosNoValidosException ex)
-            {
-                return BadRequest(new { mensaje = ex.Message });
-            }
         }
 
-        // Intento crear un Clérigo gestionando errores
         [HttpPost("clerigo")]
         public async Task<IActionResult> CreateClerigo([FromBody] ClerigoCreateDto dto)
         {
@@ -109,35 +89,23 @@ namespace GestorHeroes.Controllers
             {
                 return Conflict(new { mensaje = ex.Message });
             }
-            catch (AtributosNoValidosException ex)
-            {
-                return BadRequest(new { mensaje = ex.Message });
-            }
         }
 
-        // Actualizo un personaje existente validando también los datos de entrada
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] PersonajeBaseDto dto)
         {
             try
             {
                 var actualizado = await _personajeService.UpdateAsync(id, dto);
-
                 if (!actualizado) return NotFound();
-
                 return NoContent();
             }
             catch (NombreDuplicadoException ex)
             {
                 return Conflict(new { mensaje = ex.Message });
             }
-            catch (AtributosNoValidosException ex)
-            {
-                return BadRequest(new { mensaje = ex.Message });
-            }
         }
 
-        // Elimino un personaje del sistema
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -146,7 +114,6 @@ namespace GestorHeroes.Controllers
             return NoContent();
         }
 
-        // Busco personajes por un rasgo JSON específico
         [HttpGet("rasgo/{clave}")]
         public async Task<IActionResult> GetByRasgo(string clave)
         {
@@ -154,7 +121,6 @@ namespace GestorHeroes.Controllers
             return Ok(personajes);
         }
 
-        // Obtengo las estadísticas del gremio
         [HttpGet("estadisticas/gremio")]
         public async Task<IActionResult> GetEstadisticasPorGremio()
         {
