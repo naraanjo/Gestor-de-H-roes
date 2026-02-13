@@ -8,51 +8,46 @@ namespace GestorHeroes.Services
 {
     /*
      * Author: Álvaro Naranjo Rodriguez
-     * Descripción: Implementación de la lógica de negocio para la gestión de personajes.
-     * Esta clase gestiona la persistencia polimórfica (TPT) y el procesamiento 
-     * de datos dinámicos mediante JSONB en PostgreSQL.
+     * Descripción: Implemento la lógica de negocio asegurándome de validar que los nombres sean únicos.
      */
     public class PersonajeService : IPersonajeService
     {
         private readonly GameDbContext _context;
 
-        // Inyección del contexto de base de datos a través del constructor
+        // Inyecto el contexto de la base de datos para poder realizar las operaciones de persistencia
         public PersonajeService(GameDbContext context)
         {
             _context = context;
         }
 
-        /// <summary>
-        /// Obtiene todos los personajes registrados en el sistema.
-        /// EF Core resuelve automáticamente el polimorfismo gracias a la estrategia TPT.
-        /// </summary>
+        // Recupero el listado completo de personajes almacenados en la base de datos
         public async Task<IEnumerable<Personaje>> GetAllAsync()
         {
             return await _context.Personajes.ToListAsync();
         }
 
-        /// <summary>
-        /// Busca un personaje específico por su identificador único.
-        /// </summary>
+        // Busco un personaje en particular utilizando su identificador único
         public async Task<Personaje?> GetByIdAsync(int id)
         {
             return await _context.Personajes.FindAsync(id);
         }
 
-        // --- MÉTODOS DE CREACIÓN (Implementación TPT) ---
-        // Cada método mapea el DTO específico a su entidad correspondiente en la base de datos.
+        // A continuación implemento los métodos de creación validando previamente las reglas de negocio
 
         public async Task<Guerrero> CreateGuerreroAsync(GuerreroCreateDto dto)
         {
+            // Primero valido que el nombre no exista ya para evitar duplicados
+            await ValidarNombreUnicoAsync(dto.Nombre);
+
             var guerrero = new Guerrero
             {
                 Nombre = dto.Nombre,
                 Nivel = dto.Nivel,
-                FechaCreacion = DateTime.UtcNow, // Fecha automática en UTC
+                FechaCreacion = DateTime.UtcNow,
                 Gremio = dto.Gremio,
                 ArmaPrincipal = dto.ArmaPrincipal,
                 Furia = dto.Furia,
-                Rasgos = ConvertJson(dto.Rasgos) // Conversión de JsonElement a JsonDocument
+                Rasgos = ConvertJson(dto.Rasgos)
             };
             _context.Guerreros.Add(guerrero);
             await _context.SaveChangesAsync();
@@ -61,6 +56,9 @@ namespace GestorHeroes.Services
 
         public async Task<Mago> CreateMagoAsync(MagoCreateDto dto)
         {
+            // Verifico la disponibilidad del nombre antes de crear el objeto mago y persistirlo
+            await ValidarNombreUnicoAsync(dto.Nombre);
+
             var mago = new Mago
             {
                 Nombre = dto.Nombre,
@@ -78,6 +76,9 @@ namespace GestorHeroes.Services
 
         public async Task<Arquero> CreateArqueroAsync(ArqueroCreateDto dto)
         {
+            // Me aseguro de que el nombre sea único antes de proceder con la creación del arquero
+            await ValidarNombreUnicoAsync(dto.Nombre);
+
             var arquero = new Arquero
             {
                 Nombre = dto.Nombre,
@@ -95,6 +96,9 @@ namespace GestorHeroes.Services
 
         public async Task<Clerigo> CreateClerigoAsync(ClerigoCreateDto dto)
         {
+            // Antes de guardar el clérigo compruebo que no exista otro héroe con el mismo nombre
+            await ValidarNombreUnicoAsync(dto.Nombre);
+
             var clerigo = new Clerigo
             {
                 Nombre = dto.Nombre,
@@ -110,20 +114,21 @@ namespace GestorHeroes.Services
             return clerigo;
         }
 
-        /// <summary>
-        /// Actualiza los datos base de un personaje existente y sus rasgos dinámicos.
-        /// </summary>
         public async Task<bool> UpdateAsync(int id, PersonajeBaseDto dto)
         {
             var personaje = await _context.Personajes.FindAsync(id);
             if (personaje == null) return false;
 
-            // Actualización de campos comunes
+            // Al actualizar compruebo si el nombre ha cambiado respecto al actual antes de validar unicidad
+            if (!string.Equals(personaje.Nombre, dto.Nombre, StringComparison.CurrentCultureIgnoreCase))
+            {
+                await ValidarNombreUnicoAsync(dto.Nombre);
+            }
+
             personaje.Nombre = dto.Nombre;
             personaje.Nivel = dto.Nivel;
             personaje.Gremio = dto.Gremio;
 
-            // Actualización del documento JSON si se proporciona en el DTO
             if (dto.Rasgos.HasValue)
             {
                 personaje.Rasgos = ConvertJson(dto.Rasgos);
@@ -133,9 +138,6 @@ namespace GestorHeroes.Services
             return true;
         }
 
-        /// <summary>
-        /// Elimina un personaje del sistema por su ID.
-        /// </summary>
         public async Task<bool> DeleteAsync(int id)
         {
             var personaje = await _context.Personajes.FindAsync(id);
@@ -146,26 +148,18 @@ namespace GestorHeroes.Services
             return true;
         }
 
-        // --- CONSULTAS COMPLEJAS (Requisito Punto 6) ---
-
-        /// <summary>
-        /// Filtrado Profundo por JSON: Busca personajes que posean una clave específica 
-        /// dentro de su columna 'Rasgos' (JSONB).
-        /// </summary>
         public async Task<IEnumerable<Personaje>> GetByRasgoAsync(string claveRasgo)
         {
-            // Nota: Se realiza una búsqueda insensible a mayúsculas/minúsculas sobre las claves del JSON
+            // Recupero todos los personajes y filtro en memoria aquellos que contengan la clave de rasgo especificada en su estructura JSON
             var todos = await _context.Personajes.ToListAsync();
             return todos.Where(p => p.Rasgos != null &&
                                p.Rasgos.RootElement.EnumerateObject()
                                .Any(prop => prop.Name.Equals(claveRasgo, StringComparison.OrdinalIgnoreCase)));
         }
 
-        /// <summary>
-        /// Agrupación Polimórfica: Genera estadísticas de nivel promedio y conteo agrupados por Gremio.
-        /// </summary>
         public async Task<object> GetEstadisticasPorGremioAsync()
         {
+            // Agrupo los personajes por su gremio y calculo métricas como la cantidad total y el nivel promedio de cada grupo
             return await _context.Personajes
                 .GroupBy(p => p.Gremio)
                 .Select(g => new
@@ -177,17 +171,31 @@ namespace GestorHeroes.Services
                 .ToListAsync();
         }
 
-        // --- HELPERS ---
-
-        /// <summary>
-        /// Método auxiliar para transformar un JsonElement (volátil) en un JsonDocument 
-        /// persistente apto para ser almacenado en PostgreSQL.
-        /// </summary>
         private JsonDocument? ConvertJson(JsonElement? elemento)
         {
+            // Transformo el elemento JSON recibido en un documento persistente si este contiene valor
             if (!elemento.HasValue) return null;
-            // Parseamos el RawText para asegurar que el documento sea independiente del ciclo de vida del request
             return JsonDocument.Parse(elemento.Value.GetRawText());
         }
+
+        // Defino este método privado para encapsular la verificación de nombres en la base de datos
+        private async Task ValidarNombreUnicoAsync(string nombre)
+        {
+            // Compruebo en la base de datos si existe algún personaje con el mismo nombre ignorando mayúsculas y minúsculas
+            bool existe = await _context.Personajes
+                .AnyAsync(p => p.Nombre.ToLower() == nombre.ToLower());
+
+            if (existe)
+            {
+                // Si encuentro coincidencias lanzo una excepción personalizada para detener el proceso
+                throw new NombreDuplicadoException($"El nombre '{nombre}' ya está en uso por otro héroe.");
+            }
+        }
+    }
+
+    // Defino una excepción personalizada para notificar errores de conflicto de nombres
+    public class NombreDuplicadoException : Exception
+    {
+        public NombreDuplicadoException(string message) : base(message) { }
     }
 }

@@ -5,25 +5,25 @@ namespace GestorHeroes.Services
 {
     /*
      * Author: Álvaro Naranjo Rodriguez
-     * Descripción: Interfaz para gestionar la lógica de negocio de los personajes.
+     * Descripción: Defino el contrato que debe cumplir el servicio encargado de la lógica de negocio de los personajes.
      */
     public interface IPersonajeService
     {
-        // --- CRUD Básico ---
+        // Declaro los métodos necesarios para recuperar el listado completo o un personaje individual por su identificador
         Task<IEnumerable<Personaje>> GetAllAsync();
         Task<Personaje?> GetByIdAsync(int id);
 
-        // --- Creación (Específica por tipo para TPT) ---
+        // Establezco las firmas para la creación de cada tipo específico de héroe respetando la herencia
         Task<Guerrero> CreateGuerreroAsync(GuerreroCreateDto dto);
         Task<Mago> CreateMagoAsync(MagoCreateDto dto);
         Task<Arquero> CreateArqueroAsync(ArqueroCreateDto dto);
         Task<Clerigo> CreateClerigoAsync(ClerigoCreateDto dto);
 
-        // --- Actualizar y Borrar ---
+        // Defino las operaciones que permiten modificar los datos de un personaje o eliminarlo del sistema
         Task<bool> UpdateAsync(int id, PersonajeBaseDto dto);
         Task<bool> DeleteAsync(int id);
 
-        // --- Consultas Complejas ---
+        // Incluyo los métodos para realizar búsquedas específicas por rasgos y obtener cálculos estadísticos
         Task<IEnumerable<Personaje>> GetByRasgoAsync(string claveRasgo);
         Task<object> GetEstadisticasPorGremioAsync();
     }
