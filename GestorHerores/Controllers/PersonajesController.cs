@@ -5,7 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GestorHeroes.Controllers
 {
-    // Controlador encargado de gestionar los personajes del sistema
+    /*
+     * Author: Pablo Rubio Prado
+     * Descripción: Controlador encargado de gestionar los personajes del sistema mediante una API RESTful.
+     */
     [ApiController]
     [Route("api/[controller]")]
     public class PersonajesController : ControllerBase
@@ -45,6 +48,7 @@ namespace GestorHeroes.Controllers
             }
             catch (NombreDuplicadoException ex)
             {
+                // Devuelvo conflicto si el nombre ya existe en el sistema
                 return Conflict(new { mensaje = ex.Message });
             }
         }
@@ -114,9 +118,12 @@ namespace GestorHeroes.Controllers
             return NoContent();
         }
 
+        // --- CONSULTAS COMPLEJAS ---
+
         [HttpGet("rasgo/{clave}")]
         public async Task<IActionResult> GetByRasgo(string clave)
         {
+            // Búsqueda de personajes basada en una clave específica dentro del campo JSONB
             var personajes = await _personajeService.GetByRasgoAsync(clave);
             return Ok(personajes);
         }
@@ -124,6 +131,7 @@ namespace GestorHeroes.Controllers
         [HttpGet("estadisticas/gremio")]
         public async Task<IActionResult> GetEstadisticasPorGremio()
         {
+            // Obtención de métricas agrupadas por el campo Gremio
             var stats = await _personajeService.GetEstadisticasPorGremioAsync();
             return Ok(stats);
         }
